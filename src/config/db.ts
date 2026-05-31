@@ -7,6 +7,8 @@ import env from './env';
 // connectDB keeps DB logic isolated; await before starting server.
 export async function connectDB(): Promise<void> {
   try {
+    console.log('📦 Connecting to:', env.mongoUri);
+
     // mongoose.connect returns a promise; it uses env.mongoUri
     await mongoose.connect(env.mongoUri);
     console.log('✅ MongoDB connected');

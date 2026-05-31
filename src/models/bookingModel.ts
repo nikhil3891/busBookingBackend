@@ -1,36 +1,27 @@
 // src/models/booking.model.ts
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 
-export interface IBooking extends Document {
-  userId: Schema.Types.ObjectId;
-  busId: Schema.Types.ObjectId;
-  seats: string[];
-  passengerDetails?: { name: string; age?: number; gender?: string }[];
-  amount: number;
-  bookingTime: Date;
-  travelDate: Date;
-  ticketStatus: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  paymentStatus: 'pending' | 'paid' | 'failed' | 'refunded';
-  paymentProvider?: string;
-  paymentRef?: string;
-  operatorSnapshot?: any;
-}
+const passengerSchema = new Schema({
+  name: { type: String, required: true },
+  age: { type: Number },
+  gender: { type: String, enum: ['male','female','other'] },
+  seatNo: { type: String, required: true }
+}, { _id: false });
 
-const bookingSchema = new Schema<IBooking>({
-  userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-  busId: { type: Schema.Types.ObjectId, ref: 'Bus', required: true },
-  seats: [{ type: String, required: true }],
-  passengerDetails: [{ name: String, age: Number, gender: String }],
-  amount: { type: Number, required: true },
-  bookingTime: { type: Date, default: Date.now },
+const bookingSchema = new Schema({
+  userId: { type: Types.ObjectId, ref: 'User', required: true },
+  busId: { type: Types.ObjectId, ref: 'Bus', required: true },
+  bookingAt: { type: Date, default: Date.now },
   travelDate: { type: Date, required: true },
-  ticketStatus: { type: String, enum: ['pending','confirmed','cancelled','completed'], default: 'pending' },
-  paymentStatus: { type: String, enum: ['pending','paid','failed','refunded'], default: 'pending' },
-  paymentProvider: { type: String },
-  paymentRef: { type: String },
-  operatorSnapshot: { type: Schema.Types.Mixed }
+  from: { type: String, required: true }, // boarding stop
+  to: { type: String, required: true },   // drop stop
+  passengers: { type: [passengerSchema], required: true },
+  totalFare: { type: Number, required: true },
+  paymentId: { type: Types.ObjectId, ref: 'Payment' },
+  status: { type: String, enum: ['pending','confirmed','cancelled','refunded'], default: 'pending' },
+  notes: { type: String }
 }, { timestamps: true });
 
-bookingSchema.index({ userId: 1, travelDate: 1 });
+bookingSchema.index({ userId: 1, travelDate: -1 });
 
-export default model<IBooking>('Booking', bookingSchema);
+export default model('Booking', bookingSchema);

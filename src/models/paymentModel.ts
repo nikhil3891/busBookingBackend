@@ -1,24 +1,16 @@
 // src/models/payment.model.ts
-import { Schema, model, Document } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 
-export interface IPayment extends Document {
-  bookingId: Schema.Types.ObjectId;
-  amount: number;
-  method: string;
-  provider: string;
-  providerRef?: string;
-  status: 'initiated' | 'success' | 'failed' | 'refunded';
-  meta?: any;
-}
-
-const paymentSchema = new Schema<IPayment>({
-  bookingId: { type: Schema.Types.ObjectId, ref: 'Booking', required: true },
+const paymentSchema = new Schema({
+  userId: { type: Types.ObjectId, ref: 'User', required: true },
+  bookingId: { type: Types.ObjectId, ref: 'Booking' },
   amount: { type: Number, required: true },
-  method: { type: String, required: true },
-  provider: { type: String, required: true },
-  providerRef: { type: String },
+  currency: { type: String, default: 'INR' },
+  method: { type: String, enum: ['upi','card','wallet','other'], default: 'upi' },
+  provider: { type: String },
+  providerReference: { type: String }, // provider txn id
   status: { type: String, enum: ['initiated','success','failed','refunded'], default: 'initiated' },
-  meta: { type: Schema.Types.Mixed }
+  metadata: { type: Schema.Types.Mixed }
 }, { timestamps: true });
 
-export default model<IPayment>('Payment', paymentSchema);
+export default model('Payment', paymentSchema);

@@ -1,53 +1,96 @@
-import express, { Request, Response } from "express";
+import express, { Request, Response } from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
 import morgan from 'morgan';
 import passport from 'passport';
-import rateLimiter from './middlewares/rateLimiterMiddleware';
-import errorHandler from './middlewares/errorHandler';
-import { json, urlencoded } from 'express';
-
-// import authRoutes from './routes/auth.routes';
 import './passport/jwt.strategy';
-// import routes from "./routes";
 
+import { errorHandler } from './core/errors/errorHandler';
+import { globalRateLimiter } from './core/middlewares/rate-limit.middleware';
+import { env } from './core/config/env.config';
+import routes from './routes/index';
+
+// Bull Board for queue monitoring
+import { createBullBoard } from '@bull-board/api';
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter';
+import { ExpressAdapter } from '@bull-board/express';
+import { emailQueue } from './jobs/queues/email.queue';
+import { smsQueue } from './jobs/queues/sms.queue';
+import { invoiceQueue } from './jobs/queues/invoice.queue';
+import { analyticsQueue } from './jobs/queues/analytics.queue';
 
 const app = express();
 
-// Security headers
+// ─── Security Headers ───────────────────────────────────────────────────────
 app.use(helmet());
 
-// CORS: in production configure origin whitelist
-app.use(cors());
+// ─── CORS ────────────────────────────────────────────────────────────────────
+app.use(
+  cors({
+    origin: env.cors.origins.includes('*') ? '*' : env.cors.origins,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Tenant-Id'],
+  }),
+);
 
-// Protect from HTTP parameter pollution attacks
+// ─── Body & Security Parsers ─────────────────────────────────────────────────
 app.use(hpp());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-app.use(express.json());
-app.use(urlencoded({ extended: true }));
+// ─── Logging ─────────────────────────────────────────────────────────────────
+app.use(morgan(env.node.isProd ? 'combined' : 'dev'));
 
-// Simple logging middleware (use winston in production)
-app.use(morgan('dev'));
-
-// Initialize passport (JWT strategy will be used on protected routes)
+// ─── Passport ────────────────────────────────────────────────────────────────
 app.use(passport.initialize());
 
-// Centralized error handler (last)
-// app.use(errorHandler);
+// ─── Bull Board (admin queue monitoring) ─────────────────────────────────────
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath(env.bullBoard.path);
 
-app.get("/", (req: Request, res: Response) => {
-  res.send("Bus booking backend (TypeScript) is running 🚍");
+createBullBoard({
+  queues: [
+    new BullMQAdapter(emailQueue),
+    new BullMQAdapter(smsQueue),
+    new BullMQAdapter(invoiceQueue),
+    new BullMQAdapter(analyticsQueue),
+  ],
+  serverAdapter,
 });
 
-// ✅ Example API route
-app.get("/api/health", (req: Request, res: Response) => {
-  res.json({ status: "ok", timestamp: new Date() });
+app.use(env.bullBoard.path, serverAdapter.getRouter());
+
+// ─── Health Check ─────────────────────────────────────────────────────────────
+app.get('/api/health', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    timestamp: new Date(),
+    version: process.env['npm_package_version'] ?? '1.0.0',
+    environment: env.node.env,
+  });
 });
 
-app.use('/api', rateLimiter);
-// app.use("/api", routes);
+// ─── Serve Invoice PDFs ───────────────────────────────────────────────────────
+app.use('/uploads', express.static('uploads'));
 
+// ─── Rate Limiting ────────────────────────────────────────────────────────────
+app.use('/api', globalRateLimiter);
+
+// ─── API Routes ───────────────────────────────────────────────────────────────
+app.use('/api', routes);
+
+// ─── 404 Handler ─────────────────────────────────────────────────────────────
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({
+    success: false,
+    code: 'NOT_FOUND',
+    message: 'Route not found',
+  });
+});
+
+// ─── Error Handler ────────────────────────────────────────────────────────────
 app.use(errorHandler);
 
 export default app;

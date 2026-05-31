@@ -1,9 +1,10 @@
 // src/types/express.d.ts
-import { IUser } from '../models/user.model';
+import { IUser } from '../models/usersModel';
+
 declare global {
   namespace Express {
     interface Request {
-      user?: any; // set by passport, keep any for now
+      user?: IUser; // set by passport, keep any for now
     }
   }
 }
