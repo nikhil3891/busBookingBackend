@@ -1,7 +1,7 @@
 // src/middlewares/rateLimiter.middleware.ts
 // Basic express-rate-limit middleware; for multi-instance use a Redis store.
 
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import env from '../config/env';
 
 const limiter = rateLimit({

@@ -1,4 +1,4 @@
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 import { getRedisClient } from '../redis/redis.client';
 import { env } from '../config/env.config';
 import { TooManyRequestsError } from '../errors/AppError';
@@ -39,7 +39,11 @@ export const authRateLimiter = rateLimit({
   max: env.rateLimit.authMax,
   standardHeaders: true,
   legacyHeaders: false,
-  keyGenerator: (req) => `auth:${req.ip}:${(req.body as { phone?: string }).phone ?? ''}`,
+  keyGenerator: (req) => {
+  const ipKey = ipKeyGenerator(req.ip ?? '');
+  const phone = (req.body as { phone?: string }).phone ?? '';
+  return `auth:${ipKey}:${phone}`;
+},
   handler: (_req: Request, _res: Response, next: (err: Error) => void) => {
     next(new TooManyRequestsError('Too many OTP attempts. Please try again in 15 minutes.'));
   },

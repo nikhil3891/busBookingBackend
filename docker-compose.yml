@@ -13,7 +13,7 @@ services:
       - PORT=4001
       - MONGO_URI=mongodb://mongo:27017/busBookingDB
       - REDIS_HOST=redis
-      - REDIS_PORT=6379
+      - REDIS_PORT=6380
       - JWT_SECRET=${JWT_SECRET:-super_secret_dev_key_change_in_prod}
       - JWT_EXPIRES_IN=15m
       - REFRESH_EXPIRES_IN=7d
@@ -50,7 +50,7 @@ services:
     image: redis:7.2-alpine
     container_name: bus-booking-redis
     ports:
-      - '6379:6379'
+      - '6380:6380'
     command: redis-server --appendonly yes
     volumes:
       - redis-data:/data
