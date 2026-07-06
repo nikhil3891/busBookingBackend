@@ -5,6 +5,7 @@ import hpp from 'hpp';
 import morgan from 'morgan';
 import passport from 'passport';
 import './passport/jwt.strategy';
+import { swaggerRouter } from './core/openapi/swagger.middleware';
 
 import { errorHandler } from './core/errors/errorHandler';
 import { globalRateLimiter } from './core/middlewares/rate-limit.middleware';
@@ -80,6 +81,9 @@ app.use('/api', globalRateLimiter);
 
 // ─── API Routes ───────────────────────────────────────────────────────────────
 app.use('/api', routes);
+
+// ─── Swagger UI ──────────────────────────────────────────────────────────────
+app.use('/api/docs', swaggerRouter);
 
 // ─── 404 Handler ─────────────────────────────────────────────────────────────
 app.use((_req: Request, res: Response) => {
