@@ -3,6 +3,7 @@ import { OpenAPIRegistry } from '@asteasolutions/zod-to-openapi';
 import {
   sendOtpSchema,
   verifyOtpSchema,
+  adminRegisterSchema,
 } from './auth.validation';
 
 export function registerAuthOpenApi(
@@ -55,6 +56,30 @@ export function registerAuthOpenApi(
       },
       400: {
         description: 'Invalid or expired OTP',
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/auth/admin-register',
+    tags: ['Authentication'],
+    summary: 'Admin Register',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: adminRegisterSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Admin registered successfully',
+      },
+      400: {
+        description: 'Invalid admin details',
       },
     },
   });

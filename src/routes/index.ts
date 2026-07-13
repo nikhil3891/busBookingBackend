@@ -14,6 +14,7 @@ router.use(tenantMiddleware);
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/admin', userRoutes); // Admin routes can be the same as user routes but with different permissions
 router.use('/buses', busRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);

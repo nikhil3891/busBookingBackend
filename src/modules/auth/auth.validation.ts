@@ -57,3 +57,13 @@ export const setPasswordSchema = z.object({
   message: 'Passwords do not match',
   path: ['confirmPassword'],
 });
+
+export const adminRegisterSchema = z.object({
+  phone: z.string().trim().regex(/^[6-9]\d{9}$/),
+  email: z.string().email().optional(),
+  fullName: z.string().min(2).max(100),
+  role: z.enum(['admin', 'operator']),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+  tenantId: z.string().optional(),
+});
+

@@ -8,6 +8,9 @@ export enum Role {
   ADMIN = 'admin',
   OPERATOR = 'operator',
   SUPER_ADMIN = 'super_admin',
+  Manager = 'manager',
+  Driver = 'driver',
+  Conductor = 'conductor',
 }
 
 export enum Permission {
@@ -89,6 +92,28 @@ export const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.VIEW_ANALYTICS,
   ],
   [Role.SUPER_ADMIN]: Object.values(Permission),
+  [Role.Manager]: [
+    Permission.READ_PROFILE,
+    Permission.UPDATE_PROFILE,
+    Permission.READ_BUS,
+    Permission.READ_ALL_BOOKINGS,
+    Permission.READ_ALL_PAYMENTS,
+    Permission.READ_NOTIFICATIONS,
+  ],
+  [Role.Driver]: [
+    Permission.READ_PROFILE,
+    Permission.UPDATE_PROFILE,
+    Permission.READ_BUS,
+    Permission.READ_ALL_BOOKINGS,
+    Permission.READ_NOTIFICATIONS,
+  ],
+  [Role.Conductor]: [
+    Permission.READ_PROFILE,
+    Permission.UPDATE_PROFILE,
+    Permission.READ_BUS,
+    Permission.READ_ALL_BOOKINGS,
+    Permission.READ_NOTIFICATIONS,
+  ],
 };
 
 export interface AuthenticatedRequest extends Request {
