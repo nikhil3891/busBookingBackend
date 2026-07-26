@@ -80,6 +80,15 @@ export class AuthController {
       next(err);
     }
   }
+
+  async operatorLogin(req: Request, res: Response, next: NextFunction): Promise<void>{
+    try {
+      const result = await authService.operatorLogin(req.body);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
 }
 
 export const authController = new AuthController();

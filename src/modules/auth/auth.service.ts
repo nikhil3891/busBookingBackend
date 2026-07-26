@@ -26,6 +26,7 @@ import {
 import { Role } from '../../core/types';
 import { User } from '../user/user.model';
 import { logger } from '../../core/logger/logger';
+import { token } from 'morgan';
 
 function generateOtp(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -42,6 +43,16 @@ function signRefreshToken(payload: Omit<JwtPayload, 'type' | 'iat' | 'exp'>): st
     expiresIn: env.jwt.refreshExpiry as jwt.SignOptions['expiresIn'],
   });
 }
+
+// finction verifyRefreshToken(token: string): JwtPayload {
+//   try {
+//     const payload = jwt.verify(token, env.jwt.secret) as JwtPayload;
+//     if (payload.type !== 'refresh') throw new UnauthorizedError('Invalid token type');
+//     return payload;
+//   } catch (err) {
+//     throw new UnauthorizedError('Invalid refresh token');
+//   }
+// }
 
 export class AuthService {
   async sendOtp(dto: SendOtpDto): Promise<{ message: string }> {
@@ -255,6 +266,47 @@ export class AuthService {
 
     await user.save();
     return { message: `${dto.role} created successfully` };
+  }
+
+  async operatorLogin(dto: AdminLoginDto): Promise<AuthResult>{
+    const query = dto.phone ? { phone: dto.phone } : { email: dto.email };
+    const user = await User.findOne(query).select('+password +refreshTokens');
+
+    if (!user) throw new UnauthorizedError('Invalid credentials');
+    if (user.role !== Role.OPERATOR) {
+      throw new ForbiddenError('Access denied');
+    }
+    if (!user.isActive) throw new ForbiddenError('Account is suspended');
+
+    const isValid = await user.comparePassword(dto.password);
+    if (!isValid) throw new UnauthorizedError('Invalid credentials');
+
+    const jwtPayload: Omit<JwtPayload, 'type' | 'iat' | 'exp'> = {
+      sub: user.id,
+      role: user.role,
+      ...(user.tenantId ? { tenantId: user.tenantId.toString() } : {}),
+    };
+
+    const accessToken = signAccessToken(jwtPayload, env.jwt.operatorExpiry);
+    const refreshToken = signRefreshToken(jwtPayload);
+    const tokenHash = authRepository.hashToken(refreshToken);
+    const deviceId = crypto.randomUUID();
+
+    await authRepository.addRefreshToken(user._id, tokenHash, deviceId, 'operator-web');
+
+    return {
+      user: {
+        id: user.id,
+        phone: user.phone,
+        role: user.role,
+        fullName: user.fullName,
+        isVerified: user.isVerified,
+        profileCompleted: true,
+        tenantId: user.tenantId?.toString(),
+      },
+      tokens: { accessToken, refreshToken },
+      profileRequired: false,
+    };
   }
 }
 

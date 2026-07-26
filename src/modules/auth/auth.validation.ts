@@ -67,3 +67,10 @@ export const adminRegisterSchema = z.object({
   tenantId: z.string().optional(),
 });
 
+export const operatorLoginSchema = z.object({
+  phone: z.string().trim().regex(/^[6-9]\d{9}$/).optional(),
+  email: z.string().email().optional(),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+}).refine((d) => d.phone ?? d.email, {
+  message: 'Provide phone or email',  
+})

@@ -4,6 +4,7 @@ import {
   sendOtpSchema,
   verifyOtpSchema,
   adminRegisterSchema,
+  adminLoginSchema,
 } from './auth.validation';
 
 export function registerAuthOpenApi(
@@ -62,7 +63,7 @@ export function registerAuthOpenApi(
 
   registry.registerPath({
     method: 'post',
-    path: '/api/auth/admin-register',
+    path: '/api/auth/admin/create',
     tags: ['Authentication'],
     summary: 'Admin Register',
     request: {
@@ -80,6 +81,30 @@ export function registerAuthOpenApi(
       },
       400: {
         description: 'Invalid admin details',
+      },
+    },
+  });
+
+  registry.registerPath({
+    method: 'post',
+    path: '/api/auth/admin/login',
+    tags: ['Authentication'],
+    summary: 'Admin Login',
+    request: {
+      body: {
+        content: {
+          'application/json': {
+            schema: adminLoginSchema,
+          },
+        },
+      },
+    },
+    responses: {
+      200: {
+        description: 'Admin logged in successfully',
+      },
+      400: {
+        description: 'Invalid admin credentials',
       },
     },
   });

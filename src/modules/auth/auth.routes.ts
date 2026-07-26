@@ -10,6 +10,8 @@ import {
   refreshTokenSchema,
   adminLoginSchema,
   createAdminSchema,
+  operatorLoginSchema,
+
 } from './auth.validation';
 import { Role } from '../../core/types';
 
@@ -34,5 +36,16 @@ router.post(
   validate(createAdminSchema),
   authController.createAdmin.bind(authController),
 );
+
+
+// ─── Operator Panel Dashboard Auth ─────────────────────────────────────────────────────────
+router.post(
+  '/operator/login',
+  strictRateLimiter,
+  validate(operatorLoginSchema),
+  authController.operatorLogin.bind(authController),
+);
+
+
 
 export default router;
