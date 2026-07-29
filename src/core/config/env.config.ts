@@ -37,6 +37,7 @@ export const env = {
     accessExpiry: optional('JWT_EXPIRES_IN', '15m'),
     refreshExpiry: optional('REFRESH_EXPIRES_IN', '7d'),
     adminExpiry: optional('JWT_EXPIRES_IN_ADMIN', '1h'),
+    operatorExpiry: optional('JWT_EXPIRES_IN_OPERATOR', '8h'),
   },
   rateLimit: {
     windowMs: parseInt(optional('RATE_WINDOW_MS', String(15 * 60 * 1000)), 10),

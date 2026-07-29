@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import authRoutes from '../modules/auth/auth.routes';
 import userRoutes from '../modules/user/user.routes';
+import adminRoutes from '../modules/admin/admin.routes';
 import busRoutes from '../modules/bus/bus.routes';
 import bookingRoutes from '../modules/booking/booking.routes';
 import paymentRoutes from '../modules/payment/payment.routes';
@@ -14,7 +15,7 @@ router.use(tenantMiddleware);
 
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
-router.use('/admin', userRoutes); // Admin routes can be the same as user routes but with different permissions
+router.use('/admin', adminRoutes);
 router.use('/buses', busRoutes);
 router.use('/bookings', bookingRoutes);
 router.use('/payments', paymentRoutes);

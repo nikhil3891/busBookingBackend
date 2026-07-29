@@ -44,9 +44,14 @@ export const createAdminSchema = z.object({
   phone: z.string().trim().regex(/^[6-9]\d{9}$/),
   email: z.string().email().optional(),
   fullName: z.string().min(2).max(100),
-  role: z.enum(['admin', 'operator']),
+  role: z.enum(['admin', 'operator', 'manager', 'driver', 'super_admin']),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   tenantId: z.string().optional(),
+});
+
+export const updateVerificationStatusSchema = z.object({
+  userId: z.string().min(1, 'userId is required'),
+  status: z.enum(['pending', 'approved', 'rejected']),
 });
 
 export const setPasswordSchema = z.object({

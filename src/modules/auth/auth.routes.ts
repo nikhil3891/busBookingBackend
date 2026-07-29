@@ -11,7 +11,7 @@ import {
   adminLoginSchema,
   createAdminSchema,
   operatorLoginSchema,
-
+  updateVerificationStatusSchema,
 } from './auth.validation';
 import { Role } from '../../core/types';
 
@@ -32,11 +32,11 @@ router.post('/admin/login', strictRateLimiter, validate(adminLoginSchema), authC
 router.post(
   '/admin/create',
   authenticate,
-  requireRoles(Role.ADMIN, Role.SUPER_ADMIN),
+  requireRoles(Role.ADMIN, Role.SUPER_ADMIN, Role.Manager),
   validate(createAdminSchema),
   authController.createAdmin.bind(authController),
 );
-
+// Driver verification moved to admin module routes
 
 // ─── Operator Panel Dashboard Auth ─────────────────────────────────────────────────────────
 router.post(

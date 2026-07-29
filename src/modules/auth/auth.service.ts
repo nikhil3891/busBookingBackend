@@ -22,6 +22,7 @@ import {
   AuthResult,
   TokenPair,
   JwtPayload,
+  UpdateVerificationStatusDto,
 } from './auth.types';
 import { Role } from '../../core/types';
 import { User } from '../user/user.model';
@@ -44,15 +45,15 @@ function signRefreshToken(payload: Omit<JwtPayload, 'type' | 'iat' | 'exp'>): st
   });
 }
 
-// finction verifyRefreshToken(token: string): JwtPayload {
-//   try {
-//     const payload = jwt.verify(token, env.jwt.secret) as JwtPayload;
-//     if (payload.type !== 'refresh') throw new UnauthorizedError('Invalid token type');
-//     return payload;
-//   } catch (err) {
-//     throw new UnauthorizedError('Invalid refresh token');
-//   }
-// }
+function verifyRefreshToken(token: string): JwtPayload {
+  try {
+    const payload = jwt.verify(token, env.jwt.secret) as JwtPayload;
+    if (payload.type !== 'refresh') throw new UnauthorizedError('Invalid token type');
+    return payload;
+  } catch (err) {
+    throw new UnauthorizedError('Invalid refresh token');
+  }
+}
 
 export class AuthService {
   async sendOtp(dto: SendOtpDto): Promise<{ message: string }> {
@@ -207,6 +208,68 @@ export class AuthService {
     eventBus.emit(DomainEvent.USER_LOGGED_OUT, { userId });
   }
 
+  async createAdminUser(dto: CreateAdminDto, createdById: string): Promise<{ message: string }> {
+    const existing = await User.findOne({ phone: dto.phone });
+    if (existing) throw new ConflictError('User with this phone already exists');
+
+    const creator = await User.findById(createdById);
+    if (!creator) throw new NotFoundError('Creator');
+
+    const allowedRoles = [Role.ADMIN, Role.SUPER_ADMIN, Role.Manager, Role.OPERATOR];
+    if (!allowedRoles.includes(creator.role as Role)) {
+      throw new ForbiddenError('You are not allowed to create this account');
+    }
+
+    if (dto.role === Role.SUPER_ADMIN && creator.role !== Role.SUPER_ADMIN) {
+      throw new ForbiddenError('Only super admin can create super admin accounts');
+    }
+
+    if ([Role.Manager, Role.OPERATOR, Role.Driver].includes(dto.role as Role) && ![Role.ADMIN, Role.SUPER_ADMIN, Role.Manager].includes(creator.role as Role)) {
+      throw new ForbiddenError('Only admin or super admin can create operators/managers/drivers');
+    }
+
+    const user = new User({
+      phone: dto.phone,
+      email: dto.email,
+      fullName: dto.fullName,
+      role: dto.role,
+      password: dto.password,
+      isVerified: dto.role === Role.Driver ? false : true,
+      profileCompleted: true,
+      createdBy: createdById,
+      verificationStatus: dto.role === Role.Driver ? 'pending' : 'approved',
+      ...(dto.tenantId ? { tenantId: dto.tenantId } : {}),
+    });
+
+    await user.save();
+    return { message: `${dto.role} created successfully` };
+  }
+
+  async updateVerificationStatus(userId: string, status: 'pending' | 'approved' | 'rejected', reviewedById: string): Promise<{ message: string }> {
+    const reviewer = await User.findById(reviewedById);
+    if (!reviewer) throw new NotFoundError('Reviewer');
+    if (![Role.ADMIN, Role.SUPER_ADMIN, Role.Manager].includes(reviewer.role as Role)) {
+      throw new ForbiddenError('Only admin, super admin, or manager can review drivers');
+    }
+
+    const user = await User.findById(userId);
+    if (!user) throw new NotFoundError('User');
+    if (user.role !== Role.Driver) {
+      throw new BadRequestError('Only driver accounts can be reviewed');
+    }
+
+    user.verificationStatus = status;
+    user.verifiedBy = reviewer._id;
+    if (status === 'approved') {
+      user.isVerified = true;
+    } else if (status === 'rejected') {
+      user.isVerified = false;
+    }
+    await user.save();
+
+    return { message: `Driver ${status} successfully` };
+  }
+
   async adminLogin(dto: AdminLoginDto): Promise<AuthResult> {
     const query = dto.phone ? { phone: dto.phone } : { email: dto.email };
     const user = await User.findOne(query).select('+password +refreshTokens');
@@ -246,26 +309,6 @@ export class AuthService {
       tokens: { accessToken, refreshToken },
       profileRequired: false,
     };
-  }
-
-  async createAdminUser(dto: CreateAdminDto, createdById: string): Promise<{ message: string }> {
-    const existing = await User.findOne({ phone: dto.phone });
-    if (existing) throw new ConflictError('User with this phone already exists');
-
-    const user = new User({
-      phone: dto.phone,
-      email: dto.email,
-      fullName: dto.fullName,
-      role: dto.role,
-      password: dto.password,
-      isVerified: true,
-      profileCompleted: true,
-      createdBy: createdById,
-      ...(dto.tenantId ? { tenantId: dto.tenantId } : {}),
-    });
-
-    await user.save();
-    return { message: `${dto.role} created successfully` };
   }
 
   async operatorLogin(dto: AdminLoginDto): Promise<AuthResult>{

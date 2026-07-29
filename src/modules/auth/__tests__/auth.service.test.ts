@@ -128,18 +128,68 @@ describe('AuthService', () => {
     });
   });
 
+  describe('createAdminUser()', () => {
+    it('creates an operator account for privileged roles', async () => {
+      const creator = await User.create({
+        phone: '9876543213',
+        password: 'correct_password',
+        role: 'admin',
+        isVerified: true,
+        profileCompleted: true,
+      });
+
+      const result = await authService.createAdminUser({
+        phone: '9876543214',
+        fullName: 'Operator One',
+        email: 'operator@example.com',
+        role: 'operator',
+        password: 'StrongPass123',
+      }, creator.id);
+
+      expect(result.message).toContain('operator created successfully');
+      const createdUser = await User.findOne({ phone: '9876543214' });
+      expect(createdUser?.role).toBe('operator');
+      expect(createdUser?.isActive).toBe(true);
+    });
+  });
+
+  describe('updateVerificationStatus()', () => {
+    it('approves a driver account for privileged roles', async () => {
+      const reviewer = await User.create({
+        phone: '9876543215',
+        password: 'correct_password',
+        role: 'admin',
+        isVerified: true,
+        profileCompleted: true,
+      });
+      const driver = await User.create({
+        phone: '9876543216',
+        role: 'driver',
+        isVerified: true,
+        profileCompleted: true,
+      });
+
+      const result = await authService.updateVerificationStatus(driver.id, 'approved', reviewer.id);
+
+      expect(result.message).toContain('approved');
+      const updatedDriver = await User.findById(driver.id);
+      expect(updatedDriver?.verificationStatus).toBe('approved');
+      expect(updatedDriver?.verifiedBy?.toString()).toBe(reviewer.id);
+    });
+  });
+
   describe('completeRegistration()', () => {
     it('updates user profile fields', async () => {
-      await User.create({ phone: '9876543213' });
+      await User.create({ phone: '9876543217' });
 
       await authService.completeRegistration({
-        phone: '9876543213',
+        phone: '9876543217',
         fullName: 'John Doe',
         email: 'john@example.com',
         gender: 'male',
       });
 
-      const updated = await User.findOne({ phone: '9876543213' });
+      const updated = await User.findOne({ phone: '9876543217' });
       expect(updated?.fullName).toBe('John Doe');
       expect(updated?.email).toBe('john@example.com');
       expect(updated?.profileCompleted).toBe(true);

@@ -32,6 +32,8 @@ export interface IUser extends Document {
   createdBy?: string;
   lastLoginAt?: Date;
   isActive: boolean;
+  verificationStatus?: 'pending' | 'approved' | 'rejected';
+  verifiedBy?: Types.ObjectId;
   comparePassword(candidate: string): Promise<boolean>;
   createdAt: Date;
   updatedAt: Date;
@@ -73,6 +75,12 @@ const userSchema = new Schema<IUser>(
     createdBy: String,
     lastLoginAt: Date,
     isActive: { type: Boolean, default: true },
+    verificationStatus: {
+      type: String,
+      enum: ['pending', 'approved', 'rejected'],
+      default: 'pending',
+    },
+    verifiedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   { timestamps: true },
 );

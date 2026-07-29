@@ -81,6 +81,17 @@ export class AuthController {
     }
   }
 
+  async updateVerificationStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const { userId, status } = req.body as { userId: string; status: 'pending' | 'approved' | 'rejected' };
+      const result = await authService.updateVerificationStatus(userId, status, authReq.user.id);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   async operatorLogin(req: Request, res: Response, next: NextFunction): Promise<void>{
     try {
       const result = await authService.operatorLogin(req.body);
