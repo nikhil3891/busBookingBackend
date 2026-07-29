@@ -22,7 +22,6 @@ import {
   AuthResult,
   TokenPair,
   JwtPayload,
-  // UpdateVerificationStatusDto,
 } from './auth.types';
 import { Role } from '../../core/types';
 import { User } from '../user/user.model';
