@@ -49,11 +49,6 @@ export const createAdminSchema = z.object({
   tenantId: z.string().optional(),
 });
 
-export const updateVerificationStatusSchema = z.object({
-  userId: z.string().min(1, 'userId is required'),
-  status: z.enum(['pending', 'approved', 'rejected']),
-});
-
 export const setPasswordSchema = z.object({
   phone: z.string().trim().regex(/^[6-9]\d{9}$/),
   password: z.string().min(8),

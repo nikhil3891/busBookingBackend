@@ -11,7 +11,6 @@ import {
   adminLoginSchema,
   createAdminSchema,
   operatorLoginSchema,
-  updateVerificationStatusSchema,
 } from './auth.validation';
 import { Role } from '../../core/types';
 

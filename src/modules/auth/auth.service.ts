@@ -22,7 +22,7 @@ import {
   AuthResult,
   TokenPair,
   JwtPayload,
-  UpdateVerificationStatusDto,
+  // UpdateVerificationStatusDto,
 } from './auth.types';
 import { Role } from '../../core/types';
 import { User } from '../user/user.model';
@@ -245,30 +245,6 @@ export class AuthService {
     return { message: `${dto.role} created successfully` };
   }
 
-  async updateVerificationStatus(userId: string, status: 'pending' | 'approved' | 'rejected', reviewedById: string): Promise<{ message: string }> {
-    const reviewer = await User.findById(reviewedById);
-    if (!reviewer) throw new NotFoundError('Reviewer');
-    if (![Role.ADMIN, Role.SUPER_ADMIN, Role.Manager].includes(reviewer.role as Role)) {
-      throw new ForbiddenError('Only admin, super admin, or manager can review drivers');
-    }
-
-    const user = await User.findById(userId);
-    if (!user) throw new NotFoundError('User');
-    if (user.role !== Role.Driver) {
-      throw new BadRequestError('Only driver accounts can be reviewed');
-    }
-
-    user.verificationStatus = status;
-    user.verifiedBy = reviewer._id;
-    if (status === 'approved') {
-      user.isVerified = true;
-    } else if (status === 'rejected') {
-      user.isVerified = false;
-    }
-    await user.save();
-
-    return { message: `Driver ${status} successfully` };
-  }
 
   async adminLogin(dto: AdminLoginDto): Promise<AuthResult> {
     const query = dto.phone ? { phone: dto.phone } : { email: dto.email };

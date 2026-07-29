@@ -6,7 +6,6 @@ import {
   refreshTokenSchema,
   adminLoginSchema,
   createAdminSchema,
-  updateVerificationStatusSchema,
 } from './auth.validation';
 
 export type SendOtpDto = z.infer<typeof sendOtpSchema>;
@@ -15,7 +14,6 @@ export type CompleteRegistrationDto = z.infer<typeof completeRegistrationSchema>
 export type RefreshTokenDto = z.infer<typeof refreshTokenSchema>;
 export type AdminLoginDto = z.infer<typeof adminLoginSchema>;
 export type CreateAdminDto = z.infer<typeof createAdminSchema>;
-export type UpdateVerificationStatusDto = z.infer<typeof updateVerificationStatusSchema>;
 
 export interface TokenPair {
   accessToken: string;
