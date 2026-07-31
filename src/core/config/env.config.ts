@@ -14,7 +14,7 @@ function optional(key: string, fallback: string): string {
 export const env = {
   node: {
     env: optional('NODE_ENV', 'development'),
-    port: parseInt(optional('PORT', '4001'), 10),
+    port: parseInt(optional('PORT', '4002'), 10),
     isProd: process.env.NODE_ENV === 'production',
     isDev: process.env.NODE_ENV !== 'production',
   },
