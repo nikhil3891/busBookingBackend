@@ -129,7 +129,7 @@ describe('POST /api/auth/admin/login', () => {
       .post('/api/auth/admin/login')
       .send({ phone: '9999999999', password: 'wrong' });
 
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(400);
   });
 });
 

@@ -11,12 +11,14 @@ export interface SmsJobData {
 
 export type SmsJobName = SmsJobData['type'];
 
-export const smsQueue = new Queue<SmsJobData, void, SmsJobName>('sms', {
-  connection: getBullMQConnection(),
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 3000 },
-    removeOnComplete: 100,
-    removeOnFail: 200,
-  },
-});
+export const smsQueue = (process.env.NODE_ENV === 'test'
+  ? ({ add: async () => undefined } as unknown as Queue<SmsJobData, void, SmsJobName>)
+  : new Queue<SmsJobData, void, SmsJobName>('sms', {
+      connection: getBullMQConnection(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 3000 },
+        removeOnComplete: 100,
+        removeOnFail: 200,
+      },
+    }));

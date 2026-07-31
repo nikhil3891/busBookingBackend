@@ -1,4 +1,4 @@
-import mongoose, { Types } from 'mongoose';
+import { Types } from 'mongoose';
 import { Booking, IBooking } from './booking.model';
 import { Bus } from '../bus/bus.model';
 import { Payment } from '../payment/payment.model';
@@ -18,6 +18,15 @@ import { emailQueue } from '../../jobs/queues/email.queue';
 type CreateBookingDto = z.infer<typeof createBookingSchema>;
 type ListBookingDto = z.infer<typeof listBookingSchema>;
 
+function toObjectId(value?: string | Types.ObjectId | null): Types.ObjectId | undefined {
+  if (!value) return undefined;
+  if (value instanceof Types.ObjectId) return value;
+  if (typeof value === 'string' && /^[0-9a-fA-F]{24}$/.test(value)) {
+    return new Types.ObjectId(value);
+  }
+  return undefined;
+}
+
 export class BookingService {
   async createBooking(
     dto: CreateBookingDto,
@@ -27,6 +36,14 @@ export class BookingService {
     const bus = await Bus.findById(dto.busId);
     if (!bus) throw new NotFoundError('Bus');
     if (bus.status !== 'active') throw new BadRequestError('Bus is not available for booking');
+
+    const bookingUserId = toObjectId(userId);
+    const bookingBusId = toObjectId(dto.busId);
+    const bookingTenantId = toObjectId(tenantId);
+
+    if (!bookingUserId || !bookingBusId) {
+      throw new BadRequestError('Invalid booking identifiers');
+    }
 
     const requestedSeats = dto.passengers.map((p) => p.seatNo);
     const uniqueSeats = [...new Set(requestedSeats)];
@@ -57,12 +74,9 @@ export class BookingService {
       throw new ConflictError('Seats are being booked by another user. Please try again.');
     }
 
-    const session = await mongoose.startSession();
     let booking: IBooking;
 
     try {
-      session.startTransaction();
-
       // Mark seats as locked in DB
       await Bus.updateOne(
         { _id: dto.busId },
@@ -71,39 +85,30 @@ export class BookingService {
             (acc, seatNo) => {
               const idx = bus.seats.findIndex((s) => s.seatNo === seatNo);
               acc[`seats.${idx}.status`] = 'locked';
-              acc[`seats.${idx}.bookedByUserId`] = new Types.ObjectId(userId);
+              acc[`seats.${idx}.bookedByUserId`] = bookingUserId;
               return acc;
             },
             {} as Record<string, unknown>,
           ),
         },
-        { session },
       );
 
-      booking = await Booking.create(
-        [
-          {
-            userId: new Types.ObjectId(userId),
-            busId: new Types.ObjectId(dto.busId),
-            travelDate: new Date(dto.travelDate),
-            from: dto.from,
-            to: dto.to,
-            passengers: dto.passengers,
-            totalFare,
-            status: 'pending',
-            ...(tenantId ? { tenantId: new Types.ObjectId(tenantId) } : {}),
-          },
-        ],
-        { session },
-      ).then((docs) => docs[0]!);
-
-      await session.commitTransaction();
+      booking = await Booking.create([
+        {
+          userId: bookingUserId,
+          busId: bookingBusId,
+          travelDate: new Date(dto.travelDate),
+          from: dto.from,
+          to: dto.to,
+          passengers: dto.passengers,
+          totalFare,
+          status: 'pending',
+          ...(bookingTenantId ? { tenantId: bookingTenantId } : {}),
+        },
+      ]).then((docs) => docs[0]!);
     } catch (err) {
-      await session.abortTransaction();
       await unlockSeats(dto.busId, uniqueSeats);
       throw err;
-    } finally {
-      await session.endSession();
     }
 
     eventBus.emit(DomainEvent.BOOKING_CREATED, {
@@ -127,20 +132,17 @@ export class BookingService {
   }
 
   async confirmBooking(bookingId: string, paymentId: string): Promise<IBooking> {
-    const session = await mongoose.startSession();
     let booking: IBooking | null;
 
     try {
-      session.startTransaction();
-
-      booking = await Booking.findById(bookingId).session(session);
+      booking = await Booking.findById(bookingId);
       if (!booking) throw new NotFoundError('Booking');
       if (booking.status !== 'pending') {
         throw new BadRequestError(`Cannot confirm booking with status: ${booking.status}`);
       }
 
       const seatNos = booking.passengers.map((p) => p.seatNo);
-      const bus = await Bus.findById(booking.busId).session(session);
+      const bus = await Bus.findById(booking.busId);
       if (!bus) throw new NotFoundError('Bus');
 
       // Mark seats as booked
@@ -156,21 +158,15 @@ export class BookingService {
             {} as Record<string, unknown>,
           ),
         },
-        { session },
       );
 
       booking = await Booking.findByIdAndUpdate(
         bookingId,
         { status: 'confirmed', paymentId: new Types.ObjectId(paymentId) },
-        { new: true, session },
+        { new: true },
       );
-
-      await session.commitTransaction();
     } catch (err) {
-      await session.abortTransaction();
       throw err;
-    } finally {
-      await session.endSession();
     }
 
     if (!booking) throw new NotFoundError('Booking');
@@ -211,12 +207,9 @@ export class BookingService {
       throw new BadRequestError(`Cannot cancel booking with status: ${booking.status}`);
     }
 
-    const session = await mongoose.startSession();
     let updated: IBooking | null;
 
     try {
-      session.startTransaction();
-
       const seatNos = booking.passengers.map((p) => p.seatNo);
       await Bus.updateOne(
         { _id: booking.busId },
@@ -224,7 +217,6 @@ export class BookingService {
           const bus = acc;
           return { ...bus, [`seats.${i}.status`]: 'available', [`seats.${i}.bookedByUserId`]: null };
         }, {} as Record<string, unknown>) },
-        { session },
       );
 
       updated = await Booking.findByIdAndUpdate(
@@ -235,15 +227,10 @@ export class BookingService {
           cancelledAt: new Date(),
           cancelledBy: new Types.ObjectId(userId),
         },
-        { new: true, session },
+        { new: true },
       );
-
-      await session.commitTransaction();
     } catch (err) {
-      await session.abortTransaction();
       throw err;
-    } finally {
-      await session.endSession();
     }
 
     if (!updated) throw new NotFoundError('Booking');

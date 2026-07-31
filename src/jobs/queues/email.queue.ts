@@ -23,12 +23,14 @@ export interface EmailJobData {
 
 export type EmailJobName = EmailJobData['type'];
 
-export const emailQueue = new Queue<EmailJobData, void, EmailJobName>('email', {
-  connection: getBullMQConnection(),
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: 100,
-    removeOnFail: 200,
-  },
-});
+export const emailQueue = (process.env.NODE_ENV === 'test'
+  ? ({ add: async () => undefined } as unknown as Queue<EmailJobData, void, EmailJobName>)
+  : new Queue<EmailJobData, void, EmailJobName>('email', {
+      connection: getBullMQConnection(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 100,
+        removeOnFail: 200,
+      },
+    }));

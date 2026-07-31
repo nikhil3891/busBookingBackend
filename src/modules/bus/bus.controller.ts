@@ -6,7 +6,10 @@ export class BusController {
   async search(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const result = await busService.search(req.query as never, authReq.tenantId);
+      const result = await busService.search(
+        (((req as Request & { __validated?: Record<string, unknown> }).__validated?.query ?? req.query) as never),
+        authReq.tenantId,
+      );
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -25,7 +28,11 @@ export class BusController {
   async create(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const bus = await busService.create(req.body, authReq.user.id, authReq.tenantId);
+      const bus = await busService.create(
+        (((req as Request & { __validated?: Record<string, unknown> }).__validated?.body ?? req.body) as never),
+        authReq.user.id,
+        authReq.tenantId,
+      );
       res.status(201).json({ success: true, data: { bus } });
     } catch (err) {
       next(err);
@@ -35,7 +42,11 @@ export class BusController {
   async update(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const bus = await busService.update(req.params['id']!, req.body, authReq.user.id);
+      const bus = await busService.update(
+        req.params['id']!,
+        (((req as Request & { __validated?: Record<string, unknown> }).__validated?.body ?? req.body) as never),
+        authReq.user.id,
+      );
       res.json({ success: true, data: { bus } });
     } catch (err) {
       next(err);

@@ -9,12 +9,14 @@ export interface InvoiceJobData {
 
 export type InvoiceJobName = 'generate-invoice';
 
-export const invoiceQueue = new Queue<InvoiceJobData, void, InvoiceJobName>('invoice', {
-  connection: getBullMQConnection(),
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: 50,
-    removeOnFail: 100,
-  },
-});
+export const invoiceQueue = (process.env.NODE_ENV === 'test'
+  ? ({ add: async () => undefined } as unknown as Queue<InvoiceJobData, void, InvoiceJobName>)
+  : new Queue<InvoiceJobData, void, InvoiceJobName>('invoice', {
+      connection: getBullMQConnection(),
+      defaultJobOptions: {
+        attempts: 3,
+        backoff: { type: 'exponential', delay: 5000 },
+        removeOnComplete: 50,
+        removeOnFail: 100,
+      },
+    }));

@@ -4,11 +4,31 @@ import { BadRequestError } from '../errors/AppError';
 
 type ValidateTarget = 'body' | 'params' | 'query';
 
+type RequestWithValidationState = Request & {
+  __validated?: Record<string, unknown>;
+};
+
+function getRequestValue(req: RequestWithValidationState, target: ValidateTarget): unknown {
+  if (!req.__validated) {
+    req.__validated = {};
+  }
+
+  return req.__validated[target] ?? req[target];
+}
+
+function assignValidatedValue(req: RequestWithValidationState, target: ValidateTarget, value: unknown): void {
+  if (!req.__validated) {
+    req.__validated = {};
+  }
+
+  req.__validated[target] = value;
+}
+
 export function validate(schema: ZodSchema, target: ValidateTarget = 'body') {
-  return (req: Request, _res: Response, next: NextFunction): void => {
+  return (req: RequestWithValidationState, _res: Response, next: NextFunction): void => {
     try {
-      const parsed = schema.parse(req[target]);
-      req[target] = parsed;
+      const parsed = schema.parse(getRequestValue(req, target));
+      assignValidatedValue(req, target, parsed);
       next();
     } catch (err) {
       if (err instanceof ZodError) {

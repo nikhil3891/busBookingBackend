@@ -1,5 +1,18 @@
 import { User } from '../../user/user.model';
 import { adminService } from '../admin.service';
+import { connectTestDB, disconnectTestDB, clearTestDB } from '../../../../tests/helpers/db.helper';
+
+beforeAll(async () => {
+  await connectTestDB();
+});
+
+afterAll(async () => {
+  await disconnectTestDB();
+});
+
+afterEach(async () => {
+  await clearTestDB();
+});
 
 describe('AdminService', () => {
   describe('updateDriverVerificationStatus()', () => {

@@ -48,20 +48,22 @@ app.use(morgan(env.node.isProd ? 'combined' : 'dev'));
 app.use(passport.initialize());
 
 // ─── Bull Board (admin queue monitoring) ─────────────────────────────────────
-const serverAdapter = new ExpressAdapter();
-serverAdapter.setBasePath(env.bullBoard.path);
+if (env.node.env !== 'test') {
+  const serverAdapter = new ExpressAdapter();
+  serverAdapter.setBasePath(env.bullBoard.path);
 
-createBullBoard({
-  queues: [
-    new BullMQAdapter(emailQueue),
-    new BullMQAdapter(smsQueue),
-    new BullMQAdapter(invoiceQueue),
-    new BullMQAdapter(analyticsQueue),
-  ],
-  serverAdapter,
-});
+  createBullBoard({
+    queues: [
+      new BullMQAdapter(emailQueue),
+      new BullMQAdapter(smsQueue),
+      new BullMQAdapter(invoiceQueue),
+      new BullMQAdapter(analyticsQueue),
+    ],
+    serverAdapter,
+  });
 
-app.use(env.bullBoard.path, serverAdapter.getRouter());
+  app.use(env.bullBoard.path, serverAdapter.getRouter());
+}
 
 // ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/api/health', (_req: Request, res: Response) => {

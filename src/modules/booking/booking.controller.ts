@@ -7,7 +7,7 @@ export class BookingController {
     try {
       const authReq = req as AuthenticatedRequest;
       const booking = await bookingService.createBooking(
-        req.body,
+        ((req as Request & { __validated?: Record<string, unknown> }).__validated?.body ?? req.body),
         authReq.user.id,
         authReq.tenantId,
       );
@@ -20,7 +20,10 @@ export class BookingController {
   async getMyBookings(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const result = await bookingService.listUserBookings(authReq.user.id, req.query as never);
+      const result = await bookingService.listUserBookings(
+        authReq.user.id,
+        ((req as Request & { __validated_query?: unknown }).__validated_query ?? req.query) as never,
+      );
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);
@@ -51,7 +54,7 @@ export class BookingController {
       const booking = await bookingService.cancelBooking(
         req.params['id']!,
         authReq.user.id,
-        req.body.reason,
+        (((req as Request & { __validated?: Record<string, unknown> }).__validated?.body as { reason?: string } | undefined)?.reason ?? (req.body as { reason?: string } | undefined)?.reason),
         isAdmin,
       );
       res.json({ success: true, data: { booking } });
@@ -63,7 +66,10 @@ export class BookingController {
   async listAll(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const authReq = req as AuthenticatedRequest;
-      const result = await bookingService.listAllBookings(req.query as never, authReq.tenantId);
+      const result = await bookingService.listAllBookings(
+        ((req as Request & { __validated_query?: unknown }).__validated_query ?? req.query) as never,
+        authReq.tenantId,
+      );
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);

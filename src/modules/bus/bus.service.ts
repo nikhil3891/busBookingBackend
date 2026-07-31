@@ -72,6 +72,14 @@ export class BusService {
       throw new BadRequestError('departAt must be before arriveAt');
     }
 
+    const operatorObjectId = /^[0-9a-fA-F]{24}$/.test(operatorId)
+      ? new Types.ObjectId(operatorId)
+      : undefined;
+
+    if (!operatorObjectId) {
+      throw new BadRequestError('Invalid operator id');
+    }
+
     const seats: ISeat[] = dto.seats?.length
       ? (dto.seats as ISeat[])
       : Array.from({ length: dto.totalSeats }, (_, i) => ({
@@ -82,9 +90,11 @@ export class BusService {
 
     const bus = await Bus.create({
       ...dto,
-      operatorId: new Types.ObjectId(operatorId),
+      operatorId: operatorObjectId,
       seats,
-      ...(tenantId ? { tenantId: new Types.ObjectId(tenantId) } : {}),
+      ...(tenantId && /^[0-9a-fA-F]{24}$/.test(tenantId)
+        ? { tenantId: new Types.ObjectId(tenantId) }
+        : {}),
     });
 
     await cacheDelPattern('bus:search:*');
