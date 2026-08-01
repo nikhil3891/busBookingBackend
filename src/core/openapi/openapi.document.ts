@@ -19,7 +19,7 @@ export const openApiDocument = generator.generateDocument({
   },
   servers: [
     {
-      url: 'http://localhost:4001',
+      url: 'http://localhost:4002',
       description: 'Local development',
     },
   ],

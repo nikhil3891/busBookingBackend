@@ -3,7 +3,8 @@ import http from 'http';
 import app from './app';
 import { env } from './core/config/env.config';
 import { connectDB } from './core/config/db.config';
-import { connectRedis } from './core/redis/redis.client';
+import { connectRedis, disconnectRedis } from './core/redis/redis.client';
+import { disconnectDB } from './core/config/db.config';
 import { initSocketGateway } from './socket/socket.gateway';
 import { startScheduler } from './jobs/scheduler';
 import { startEmailWorker } from './jobs/workers/email.worker';
@@ -13,36 +14,57 @@ import { startAnalyticsWorker } from './jobs/workers/analytics.worker';
 import { logger } from './core/logger/logger';
 
 async function bootstrap(): Promise<void> {
-  // 1. Connect database and cache before serving traffic
   await connectDB();
   await connectRedis();
 
-  // 2. Create HTTP server and attach Socket.IO
   const server = http.createServer(app);
   initSocketGateway(server);
 
-  // 3. Start background job workers
   startEmailWorker();
   startSmsWorker();
   startInvoiceWorker();
   startAnalyticsWorker();
-
-  // 4. Start cron scheduler
   startScheduler();
 
-  // 5. Listen
-  server.listen(env.node.port, () => {
-    logger.info(`Server running on port ${env.node.port} [${env.node.env}]`);
-    logger.info(`Bull Board: http://localhost:${env.node.port}${env.bullBoard.path}`);
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', (err: NodeJS.ErrnoException) => {
+      if (err.code === 'EADDRINUSE') {
+        reject(
+          new Error(
+            `Port ${env.node.port} is already in use.\n` +
+              `  Fix: stop the other process, then restart:\n` +
+              `    pnpm free-port\n` +
+              `    pnpm dev\n` +
+              `  Or change PORT in your .env file.`,
+          ),
+        );
+        return;
+      }
+      reject(err);
+    });
+
+    server.listen(env.node.port, () => {
+      logger.info(`Server running on port ${env.node.port} [${env.node.env}]`);
+      logger.info(`API:        http://localhost:${env.node.port}/api/health`);
+      logger.info(`Swagger:    http://localhost:${env.node.port}/api/docs`);
+      logger.info(`Bull Board: http://localhost:${env.node.port}${env.bullBoard.path}`);
+      resolve();
+    });
   });
 
-  // Graceful shutdown
   const shutdown = async (signal: string) => {
     logger.info(`[${signal}] Shutting down gracefully...`);
-    server.close(() => {
-      logger.info('HTTP server closed');
-      process.exit(0);
+    await new Promise<void>((resolve) => {
+      server.close(() => resolve());
     });
+    try {
+      await disconnectRedis();
+      await disconnectDB();
+    } catch (err) {
+      logger.warn('Error during disconnect', { err });
+    }
+    logger.info('HTTP server closed');
+    process.exit(0);
   };
 
   process.on('SIGTERM', () => void shutdown('SIGTERM'));
@@ -59,6 +81,6 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap().catch((err) => {
-  console.error('Failed to bootstrap server:', err);
+  console.error('Failed to bootstrap server:', err instanceof Error ? err.message : err);
   process.exit(1);
 });

@@ -35,8 +35,14 @@ docker-compose up mongo redis -d
 cp .env.example .env
 
 # 4. Start dev server (hot reload)
+# `predev` auto-frees PORT if a leftover node process is holding it
+pnpm free-port   # optional manual fix for EADDRINUSE
 pnpm dev
 ```
+
+> **EADDRINUSE / Port already in use:** a previous `node` process is still listening.
+> Run `pnpm free-port` (or just `pnpm dev` — `predev` does this automatically), then start again.
+
 
 **Endpoints:**
 - API: `http://localhost:4001/api`

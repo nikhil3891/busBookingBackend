@@ -6,6 +6,8 @@
   "scripts": {
     "prestart": "pnpm build",
     "start": "node dist/server.js",
+    "free-port": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/free-port.ps1",
+    "predev": "pnpm free-port",
     "dev": "nodemon --watch src --ext ts --exec ts-node src/server.ts",
     "build": "tsc",
     "lint": "eslint . --ext .ts",
